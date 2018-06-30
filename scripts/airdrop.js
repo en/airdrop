@@ -17,8 +17,14 @@ const HookedWalletSubprovider = require('web3-provider-engine/subproviders/hooke
 const RpcSubprovider = require('web3-provider-engine/subproviders/rpc.js')
 
 const CSV_PATH = path.resolve(__dirname, 'data', 'addrs.csv')
-const CONTRACT_PATH = path.resolve(__dirname, '..', 'build', 'contracts', 'Airdrop.json')
-const BATCH_SIZE = 80
+const CONTRACT_PATH = path.resolve(
+  __dirname,
+  '..',
+  'build',
+  'contracts',
+  'Airdrop.json'
+)
+const BATCH_SIZE = 100
 const CONTRACT_ADDRESS = '0xe5203EE823962ca34b70F8a137c68894C869eFa8'
 const RPC_URL = 'http://localhost:8545'
 // const RPC_URL = 'https://mainnet.infura.io/API_KEY'
@@ -33,13 +39,15 @@ const engine = new ProviderEngine()
 const web3 = new Web3(engine)
 
 // static results
-engine.addProvider(new FixtureSubprovider({
-  web3_clientVersion: 'ProviderEngine/v0.0.0/javascript',
-  net_listening: true,
-  eth_hashrate: '0x00',
-  eth_mining: false,
-  eth_syncing: true,
-}))
+engine.addProvider(
+  new FixtureSubprovider({
+    web3_clientVersion: 'ProviderEngine/v0.0.0/javascript',
+    net_listening: true,
+    eth_hashrate: '0x00',
+    eth_mining: false,
+    eth_syncing: true
+  })
+)
 
 // cache layer
 // engine.addProvider(new CacheSubprovider())
@@ -54,40 +62,47 @@ engine.addProvider(new FilterSubprovider())
 // engine.addProvider(new VmSubprovider())
 
 // id mgmt
-engine.addProvider(new HookedWalletSubprovider({
-  getAccounts: function(cb){
-    cb(null, [myWallet.getAddressString()])
-  },
-  signTransaction: function(txParams, cb){
-    const privateKey = myWallet.getPrivateKey()
-    const tx = new EthereumTx(txParams)
-    tx.sign(privateKey)
-    const hexTx = '0x' + tx.serialize().toString('hex')
-    cb(null, hexTx)
-  },
-}))
+engine.addProvider(
+  new HookedWalletSubprovider({
+    getAccounts: function(cb) {
+      cb(null, [myWallet.getAddressString()])
+    },
+    signTransaction: function(txParams, cb) {
+      const privateKey = myWallet.getPrivateKey()
+      const tx = new EthereumTx(txParams)
+      tx.sign(privateKey)
+      const hexTx = '0x' + tx.serialize().toString('hex')
+      cb(null, hexTx)
+    }
+  })
+)
 
 // data source
-engine.addProvider(new RpcSubprovider({
-  rpcUrl: RPC_URL,
-}))
+engine.addProvider(
+  new RpcSubprovider({
+    rpcUrl: RPC_URL
+  })
+)
 
 // log new blocks
-engine.on('block', function(block){
+engine.on('block', function(block) {
   console.log('================================')
-  console.log('BLOCK CHANGED:', '#'+block.number.toString('hex'), '0x'+block.hash.toString('hex'))
+  console.log(
+    'BLOCK CHANGED:',
+    '#' + block.number.toString('hex'),
+    '0x' + block.hash.toString('hex')
+  )
   console.log('================================')
 })
 
 // network connectivity error
-engine.on('error', function(err){
+engine.on('error', function(err) {
   // report connectivity errors
   console.error(err.stack)
 })
 
 // start polling for blocks
 engine.start()
-
 
 Papa.parsePromise = function(path) {
   const data = []
@@ -144,32 +159,38 @@ fs.readFilePromise = function(path) {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-Papa.parsePromise(CSV_PATH).then(function(csv) {
-  fs.readFilePromise(CONTRACT_PATH).then(function(contractFile) {
-    const Airdrop = Contract(JSON.parse(contractFile))
-    Airdrop.setProvider(engine)
-    Airdrop.at(CONTRACT_ADDRESS).then((airdropContract) => {
-      (async function loop(){
-        const gas= 4500000
-        const gasPrice = 330 * Math.pow(10, 9)
-        for (let i = 0; i < csv.length; i++) {
-          console.log('airdrop:', csv[i][0])
-          try {
-            await airdropContract.deliverTokens(
-              csv[i][0],
-              csv[i][1],
-              { from: myWallet.getAddressString(), gas: gas, gasPrice: gasPrice }
-            )
-            await delay(90000)
-          } catch (err) {
-            console.log('error:', err)
-          }
-        }
-      })()
-    })
-  }, function(err) {
+Papa.parsePromise(CSV_PATH).then(
+  function(csv) {
+    fs.readFilePromise(CONTRACT_PATH).then(
+      function(contractFile) {
+        const Airdrop = Contract(JSON.parse(contractFile))
+        Airdrop.setProvider(engine)
+        Airdrop.at(CONTRACT_ADDRESS).then(airdropContract => {
+          ;(async function loop() {
+            const gas = 4500000
+            const gasPrice = 330 * Math.pow(10, 9)
+            for (let i = 0; i < csv.length; i++) {
+              console.log('airdrop:', csv[i][0])
+              try {
+                await airdropContract.deliverTokens(csv[i][0], csv[i][1], {
+                  from: myWallet.getAddressString(),
+                  gas: gas,
+                  gasPrice: gasPrice
+                })
+                await delay(90000)
+              } catch (err) {
+                console.log('error:', err)
+              }
+            }
+          })()
+        })
+      },
+      function(err) {
+        console.log(err)
+      }
+    )
+  },
+  function(err) {
     console.log(err)
-  })
-}, function(err) {
-  console.log(err)
-})
+  }
+)
