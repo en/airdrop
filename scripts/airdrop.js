@@ -26,6 +26,7 @@ const CONTRACT_PATH = path.resolve(
 )
 const BATCH_SIZE = 100
 const CONTRACT_ADDRESS = '0xe5203EE823962ca34b70F8a137c68894C869eFa8'
+const TOKEN_DECIMALS = 18
 const RPC_URL = 'http://localhost:8545'
 // const RPC_URL = 'https://mainnet.infura.io/API_KEY'
 // const RPC_URL = 'https://ropsten.infura.io/API_KEY'
@@ -106,24 +107,24 @@ engine.start()
 
 Papa.parsePromise = function(path) {
   const data = []
-  let addrs = []
+  let receivers = []
   let tokens = []
   let n = 0
   return new Promise(function(resolve, reject) {
     Papa.parse(fs.createReadStream(path, 'utf8'), {
       step: function(row) {
-        const addr = row.data[0][0]
-        const amount = parseInt(row.data[0][1]) * Math.pow(10, 18)
-        const isAddress = web3.utils.isAddress(addr)
+        const receiver = row.data[0][0]
+        const amount = parseInt(row.data[0][1]) * Math.pow(10, TOKEN_DECIMALS)
+        const isAddress = web3.utils.isAddress(receiver)
 
         if (isAddress) {
-          addrs.push(addr)
+          receivers.push(receiver)
           tokens.push(amount)
           n++
 
           if (n >= BATCH_SIZE) {
-            data.push([addrs, tokens])
-            addrs = []
+            data.push([receivers, tokens])
+            receivers = []
             tokens = []
             n = 0
           }
@@ -133,9 +134,9 @@ Papa.parsePromise = function(path) {
         reject(err)
       },
       complete: function() {
-        if (addrs.length > 0) {
-          data.push([addrs, tokens])
-          addrs = []
+        if (receivers.length > 0) {
+          data.push([receivers, tokens])
+          receivers = []
           tokens = []
           n = 0
         }

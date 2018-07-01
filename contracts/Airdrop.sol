@@ -18,24 +18,24 @@ contract Airdrop is Ownable {
   // function() external payable {
   // }
 
-  function deliverTokens(address[] addrs, uint256 amount) external onlyOwner {
-    for (uint256 i = 0; i < addrs.length; i++) {
-      _deliverTokens(addrs[i], amount);
+  function deliverTokens(address[] receivers, uint256 amount) external onlyOwner {
+    for (uint256 i = 0; i < receivers.length; i++) {
+      _deliverTokens(receivers[i], amount);
     }
   }
 
-  function deliverTokens(address[] addrs, uint256[] amount) external onlyOwner {
-    for (uint256 i = 0; i < addrs.length; i++) {
-      _deliverTokens(addrs[i], amount[i]);
+  function deliverTokens(address[] receivers, uint256[] amount) external onlyOwner {
+    for (uint256 i = 0; i < receivers.length; i++) {
+      _deliverTokens(receivers[i], amount[i]);
     }
   }
 
-  function _deliverTokens(address beneficiary, uint256 tokenAmount) internal {
-    if ((beneficiary != address(0)) && (tokenAmount != 0) && (tokenAmount <= token.balanceOf(this))) {
-      token.transfer(beneficiary, tokenAmount);
-      emit TokenTransferred(beneficiary, tokenAmount);
+  function _deliverTokens(address receiver, uint256 amount) internal {
+    if ((receiver != address(0)) && (amount != 0) && (amount <= token.balanceOf(this))) {
+      token.transfer(receiver, amount);
+      emit TokenTransferred(receiver, amount);
     } else {
-      emit FailedTransfer(beneficiary, tokenAmount);
+      emit FailedTransfer(receiver, amount);
     }
   }
 
