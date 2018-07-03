@@ -1,9 +1,9 @@
 pragma solidity ^0.4.23;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/ownership/HasNoEther.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
-contract Airdrop is Ownable {
+contract Airdrop is HasNoEther {
   ERC20 token;
 
   event TokenTransferred(address indexed to, uint256 amount);
@@ -14,9 +14,6 @@ contract Airdrop is Ownable {
 
     token = _token;
   }
-
-  // function() external payable {
-  // }
 
   function deliverTokens(address[] receivers, uint256 amount) external onlyOwner {
     for (uint256 i = 0; i < receivers.length; i++) {
