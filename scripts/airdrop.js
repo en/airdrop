@@ -1,8 +1,9 @@
 const fs = require('fs')
 const path = require('path')
+const util = require('util')
 
 const Papa = require('papaparse')
-const Contract = require('truffle-contract')
+const contract = require('truffle-contract')
 const Web3 = require('web3')
 const EthereumWallet = require('ethereumjs-wallet')
 const EthereumTx = require('ethereumjs-tx')
@@ -16,6 +17,8 @@ const HookedWalletSubprovider = require('web3-provider-engine/subproviders/hooke
 // const NonceSubprovider = require('web3-provider-engine/subproviders/nonce-tracker.js')
 const RpcSubprovider = require('web3-provider-engine/subproviders/rpc.js')
 
+const readFile = util.promisify(fs.readFile)
+
 const CSV_PATH = path.resolve(__dirname, 'data', 'addrs.csv')
 const CONTRACT_PATH = path.resolve(
   __dirname,
@@ -28,8 +31,6 @@ const BATCH_SIZE = 100
 const CONTRACT_ADDRESS = '0xe5203EE823962ca34b70F8a137c68894C869eFa8'
 const TOKEN_DECIMALS = 18
 const RPC_URL = 'http://localhost:8545'
-// const RPC_URL = 'https://mainnet.infura.io/API_KEY'
-// const RPC_URL = 'https://ropsten.infura.io/API_KEY'
 
 const privateKey = process.argv.slice(2)[0]
 const privateKeyBuffer = new Buffer(privateKey, 'hex')
@@ -146,52 +147,29 @@ Papa.parsePromise = function(path) {
   })
 }
 
-fs.readFilePromise = function(path) {
-  return new Promise(function(resolve, reject) {
-    fs.readFile(path, 'utf-8', function(err, data) {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(data)
-      }
-    })
-  })
-}
-
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-Papa.parsePromise(CSV_PATH).then(
-  function(csv) {
-    fs.readFilePromise(CONTRACT_PATH).then(
-      function(contractFile) {
-        const Airdrop = Contract(JSON.parse(contractFile))
-        Airdrop.setProvider(engine)
-        Airdrop.at(CONTRACT_ADDRESS).then(airdropContract => {
-          ;(async function loop() {
-            const gas = 4500000
-            const gasPrice = 330 * Math.pow(10, 9)
-            for (let i = 0; i < csv.length; i++) {
-              console.log('airdrop:', csv[i][0])
-              try {
-                await airdropContract.deliverTokens(csv[i][0], csv[i][1], {
-                  from: myWallet.getAddressString(),
-                  gas: gas,
-                  gasPrice: gasPrice
-                })
-                await delay(90000)
-              } catch (err) {
-                console.log('error:', err)
-              }
-            }
-          })()
-        })
-      },
-      function(err) {
-        console.log(err)
-      }
-    )
-  },
-  function(err) {
-    console.log(err)
+const main = async () => {
+  const csvData = await Papa.parsePromise(CSV_PATH)
+  const contractFile = await readFile(CONTRACT_PATH, 'utf-8')
+  const airdrop = contract(JSON.parse(contractFile))
+  airdrop.setProvider(engine)
+  const airdropContract = await airdrop.at(CONTRACT_ADDRESS)
+  const gas = 4500000
+  const gasPrice = 330 * Math.pow(10, 9)
+  for (let i = 0; i < csvData.length; i++) {
+    console.log('airdrop:', csvData[i][0])
+    try {
+      await airdropContract.deliverTokens(csvData[i][0], csvData[i][1], {
+        from: myWallet.getAddressString(),
+        gas: gas,
+        gasPrice: gasPrice
+      })
+      await delay(90000)
+    } catch (err) {
+      console.log('error:', err)
+    }
   }
-)
+}
+
+main()
