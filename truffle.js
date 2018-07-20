@@ -21,6 +21,13 @@ module.exports = {
       port: 8545,
       network_id: '*'
     },
+    mainnet: {
+      host: 'localhost',
+      port: 8545,
+      network_id: '1',
+      gas: 3500000,
+      gasPrice: 10000000000
+    },
     ropsten: {
       host: 'localhost',
       from: '0xAa8C0975e74A8Abd44D4F137fEB8D3f20A3A07E6',
